@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml" lang="zh-CN">
+<head>
+    <title>websocket</title>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="./jquery-1.4.min.js"></script>
+    <script src="./stomp.min.js"></script>
+    <script src="./sockjs.min.js"></script>
+
+</head>
+    <style>
+        body{
+            width: 1000px;
+            height:700px;
+            background: #eeeeee;
+        }
+    </style>
+<body>
+<div style="margin: auto;text-align: center">
+    <h1>欢迎来到 老嫖客们的救赎 聊天室</h1>
+</div>
+<br/>
+<div style="margin: auto;text-align: center">
+    <select id="onLineUser">
+        <option>--所有--</option>
+    </select>
+    <input id="text" type="text"/>
+    <button onclick="send()">发送消息</button>
+</div>
+<br>
+<div style="margin-right: 10px;text-align: right">
+    <button onclick="closeWebSocket()">关闭连接</button>
+</div>
+<hr/>
+<div id="message" style="text-align: center;"></div>
+<input type="text" id="username"/>
+<button onclick="startFun()">登录</button>
+</body>
+
+
+<script type="text/javascript">
+    var webSocket;
+    var commWebSocket;
+
+        function startFun() {
+
+            var url = "ws://localhost:8080/websocket/" + document.getElementById("username").value;
+            webSocket = new WebSocket(url);
+
+            //连通之后的回调事件
+            webSocket.onopen = function () {
+                //webSocket.send( document.getElementById('username').value+"已经上线了");
+                console.log("已经连通了websocket");
+                if("烟花不易冷" == document.getElementById('username').value){
+                    setMessageInnerHTML(document.getElementById('username').value + " 像男神一般地上线了");
+                }else{
+                    setMessageInnerHTML("风骚的 " + document.getElementById('username').value + " 已经上线了");
+                }
+
+            };
+
+            //接收后台服务端的消息
+            webSocket.onmessage = function (evt) {
+                var received_msg = evt.data;
+                console.log("数据已接收:" + received_msg);
+                var obj = JSON.parse(received_msg);
+                console.log("可以解析成json:" + obj.messageType);
+                //1代表上线 2代表下线 3代表在线名单 4代表普通消息
+                if (obj.messageType == 1) {
+                    //把名称放入到selection当中供选择
+                    var onlineName = obj.username;
+                    var option = "<option>" + onlineName + "</option>";
+                    $("#onLineUser").append(option);
+                    if("烟花不易冷" == onlineName){
+                        setMessageInnerHTML(onlineName + " 像男神一般地上线了");
+                    }else{
+                        setMessageInnerHTML("风骚的 " + onlineName + "上线了");
+                    }
+
+                } else if (obj.messageType == 2) {
+                    $("#onLineUser").empty();
+                    var onlineName = obj.onlineUsers;
+                    var offlineName = obj.username;
+                    var option = "<option>" + "--所有--" + "</option>";
+                    for (var i = 0; i < onlineName.length; i++) {
+                        if (!(onlineName[i] == document.getElementById('username').value)) {
+                            option += "<option>" + onlineName[i] + "</option>"
+                        }
+                    }
+                    $("#onLineUser").append(option);
+
+                    setMessageInnerHTML(offlineName + "下线了");
+                } else if (obj.messageType == 3) {
+                    var onlineName = obj.onlineUsers;
+                    var option = null;
+                    for (var i = 0; i < onlineName.length; i++) {
+                        if (!(onlineName[i] == document.getElementById('username').value)) {
+                            option += "<option>" + onlineName[i] + "</option>"
+                        }
+                    }
+                    $("#onLineUser").append(option);
+                    console.log("获取了在线的名单" + onlineName.toString());
+                } else {
+                    setMessageInnerHTML(obj.fromusername + "@" + obj.tousername + "：" + obj.textMessage);
+                }
+            };
+
+            //连接关闭的回调事件
+            webSocket.onclose = function () {
+                console.log("连接已关闭...");
+                setMessageInnerHTML("连接已经关闭....");
+            };
+        }
+
+
+    //将消息显示在网页上
+    function setMessageInnerHTML(innerHTML) {
+        document.getElementById('message').innerHTML += innerHTML + '<br/>';
+    }
+
+    function closeWebSocket() {
+        //直接关闭websocket的连接
+        webSocket.close();
+    }
+
+    function send() {
+        var selectText = $("#onLineUser").find("option:selected").text();
+        if (selectText == "--所有--") {
+            selectText = "All";
+        } else {
+            setMessageInnerHTML(document.getElementById('username').value + "@" + selectText + "：" + $("#text").val());
+        }
+        var message = {
+            "message": document.getElementById('text').value,
+            "username": document.getElementById('username').value,
+            "to": selectText
+        };
+        webSocket.send(JSON.stringify(message));
+        $("#text").val("");
+
+    }
+    (function(e){
+        // 点击事件触发生生元素等一系列动作的初始状态
+        var bombFlag = true;
+        // body节点
+        var elBody = document.getElementsByTagName("body")[0];
+        // 初始化文字数组下标
+        var a_idx = 0;
+        elBody.onclick = function(e) {
+            if(bombFlag){
+                // 坐标
+                var ev = e||event,//  IE浏览器兼容
+                    x = ev.clientX,
+                    y = ev.clientY;
+                // 随机产生文字颜色
+                var color1 = Math.floor((Math.random()*255));
+                var color2 = Math.floor((Math.random()*255));
+                var color3 = Math.floor((Math.random()*255));
+                // 初始化定时器
+                var _timer = null;
+                // 文字数组
+                var a = new Array("木已成舟", "规则就是用来打破的","好运不会眷顾傻逼",
+                    "吾虽浪迹天涯，却未迷失本心", "无形装逼，最为致命",
+                    "输液的医生，只是为了龟根吗","真正的大师永远都怀着一颗学徒的♥", "我于杀戮之中盛放，亦如黎明中的花朵",
+                    "死亡如风，常伴吾身" ,"即使敌众我寡，末将也能万军丛中，取敌将首级");
+                // 创建节点
+                var elSpan = document.createElement("span");
+                // 随机节点内容
+                a_idx = (a_idx + 1) % a.length;
+                // 添加内容到节点
+                elSpan.innerHTML = a[a_idx];
+                // 初始节点化样式
+                elSpan.style.zIndex = 999;
+                elSpan.style.position = "fixed";
+                elSpan.style.top = y -20 + "px",
+                    elSpan.style.left = x -10 + "px";
+                elSpan.style.color = 'rgb('+color1+','+color2+','+color3+')';
+                elSpan.style.fontWeight = "bold";
+                elSpan.className = "floatSpan";
+                // 将元素追加到body中
+                elBody.appendChild(elSpan);
+                // 获取追加后的节点
+                var el = document.getElementsByClassName("floatSpan")[0];
+                // 初始化需要渐变的变量值
+                // top值
+                var cur_y = y - 20;
+                // 透明度
+                var cur_opacity = 1;
+                // 字体大小
+                var cur_fontSize = 14;
+                // 创建定时器
+                _timer = setInterval(function(){
+                    // 渐变变量
+                    cur_y += -10;
+                    cur_opacity -= 0.1;
+                    cur_fontSize += 2;
+                    // 渐变变量赋值（因为有单位的关系 所以不能直接加减 通过中间变量来赋值）
+                    el.style.top = cur_y + "px";
+                    el.style.opacity = cur_opacity;
+                    el.style.fontSize = cur_fontSize + "px";
+                },100);
+                // 时间到了之后清空定时器 清除刚才添加的元素 并且恢复点击触发事件
+                setTimeout(function(){
+                    clearInterval(_timer);
+                    elBody.removeChild(el);
+                    bombFlag = true;
+                },500);
+            }
+            // 暂停点击触发事件
+            bombFlag = false;
+        };
+    })();
+</script>
+
+</html>
